@@ -30,9 +30,8 @@ const styles = StyleSheet.create({
   },
   appbarTitle: {
     marginBottom: 8,
-    fontSize: 22,
+    fontSize: 20,
     lineHeight: 34,
     color: '#ffffff',
-    fontWeight: 'bold',
   },
 });
