@@ -38,7 +38,7 @@ export default function MemoEditScreen(props) {
           value={currentBodyText}
           multiline
           style={styles.input}
-          onChangeText={(text)=>{
+          onChangeText={(text) => {
             setCurrentBody(text);
           }}
         />
