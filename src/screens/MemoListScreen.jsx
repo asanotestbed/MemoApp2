@@ -7,7 +7,7 @@ import firebase from 'firebase';
 
 import MemoList from '../components/MemoList';
 import CircleButton from '../components/CirculeButton';
-import LogOutButton from '../components/LogOutButton';
+import HeaderRightButton from '../components/HeaderRightButton';
 import Button from '../components/Button';
 import Loading from '../components/Loading';
 
@@ -17,36 +17,49 @@ export default function MemoListScreen(props) {
   const [isLoading, setLoading] = useState(false);
 
   useEffect(() => {
-    navigation.setOptions({
-      headerRight: () => <LogOutButton />,
-    });
-  }, []);
+    setLoading(true);
 
-  useEffect(() => {
-    const db = firebase.firestore();
-    const { currentUser } = firebase.auth();
-    let unsubscribe = () => {};
-    if (currentUser) {
-      setLoading(true);
-      const ref = db.collection(`users/${currentUser.uid}/memos`).orderBy('updatedAt', 'desc');
-      unsubscribe = ref.onSnapshot((snapshot) => {
-        const userMemos = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          userMemos.push({
-            id: doc.id,
-            bodyText: data.bodyText,
-            updatedAt: data.updatedAt.toDate(),
+    const cleanupFuncs = {
+      auth: () => {},
+      memos: () => {},
+    };
+
+    cleanupFuncs.auth = firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        const db = firebase.firestore();
+        const ref = db.collection(`users/${user.uid}/memos`).orderBy('updatedAt', 'desc');
+        cleanupFuncs.memos = ref.onSnapshot((snapshot) => {
+          const userMemos = [];
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            userMemos.push({
+              id: doc.id,
+              bodyText: data.bodyText,
+              updatedAt: data.updatedAt.toDate(),
+            });
           });
+          setMemos(userMemos);
+          setLoading(false);
+        }, () => {
+          setLoading(false);
         });
-        setMemos(userMemos);
-        setLoading(false);
-      }, () => {
-        setLoading(false);
-        Alert.alert('データの読み込みに失敗しました。');
-      });
-    }
-    return unsubscribe;
+        navigation.setOptions({
+          headerRight: () => (
+            <HeaderRightButton currentUser={user} cleanupFuncs={cleanupFuncs} />
+          ),
+        });
+      } else {
+        firebase.auth().signInAnonymously()
+          .catch(() => {
+            Alert.alert('エラー', 'アプリを再起動してください');
+          })
+          .then(() => { setLoading(false); });
+      }
+    });
+    return () => {
+      cleanupFuncs.auth();
+      cleanupFuncs.memos();
+    };
   }, []);
 
   if (memos.length === 0) {
